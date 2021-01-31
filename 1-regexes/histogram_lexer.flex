@@ -1,37 +1,59 @@
 %option noyywrap
 
 %{
-/* Now in a section of C that will be embedded
-   into the auto-generated code. Flex will not
-   try to interpret code surrounded by %{ ... %} */
 
-/* Bring in our declarations for token types and
-   the yylval variable. */
+// Bring in our declarations for token types and the yylval variable
 #include "histogram.hpp"
-
 
 // This is to work around an irritating bug in Flex
 // https://stackoverflow.com/questions/46213840/get-rid-of-warning-implicit-declaration-of-function-fileno-in-flex
 extern "C" int fileno(FILE *stream);
 
-/* End the embedded code section. */
+std::string *parse_string(const std::string &yytext);
+double parse_fraction(const std::string &yytext);
+
 %}
 
+letters             ([a-z]|[A-Z])+
+string              \[[^\]]*\]
+
+unsigned_decimal    (0|([1-9][0-9]*))(\.[0-9]*)?
+decimal             -?{unsigned_decimal}
+fraction            {decimal}\/{unsigned_decimal}
+
+word                {letters}|{string}
+
+number              {decimal}|{fraction}
 
 %%
 
-[0-9]+          { fprintf(stderr, "Number : %s\n", yytext); /* TODO: get value out of yytext and into yylval.numberValue */;  return Number; }
+{letters}   { std::cerr << "letters: '" << yytext << "'\n"; yylval.wordValue = new std::string(yytext); return TokenType::WORD; }
+{string}    { std::cerr << "string: '" << yytext << "'\n"; yylval.wordValue = parse_string(yytext); return TokenType::WORD; }
 
-[a-z]+          { fprintf(stderr, "Word : %s\n", yytext); /* TODO: get value out of yytext and into yylval.wordValue */;  return Word; }
+{decimal}   { std::cerr << "decimal: '" << yytext << "'\n"; yylval.numberValue = std::stod(yytext); return TokenType::NUMBER; }
+{fraction}  { std::cerr << "fraction: '" << yytext << "'\n"; yylval.numberValue = parse_fraction(yytext); return TokenType::NUMBER; }
 
-\n              { fprintf(stderr, "Newline\n"); }
-
+\n          { std::cerr << "newline\n"; }
+.           ;
 
 %%
+
+std::string *parse_string(const std::string &yytext) {
+    return new std::string(yytext.substr(1, yytext.length() - 2));
+}
+
+double parse_fraction(const std::string &yytext) {
+    const size_t symbol_index = yytext.find_first_of('/');
+    const double numerator = std::stod(yytext.substr(0, symbol_index));
+    const double denominator =
+            std::stod(yytext.substr(symbol_index + 1, std::string::npos));
+    return numerator / denominator;
+}
 
 /* Error handler. This will get called if none of the rules match. */
-void yyerror (char const *s)
-{
-  fprintf (stderr, "Flex Error: %s\n", s); /* s is the text that wasn't matched */
-  exit(1);
+void yyerror (char const *s) {
+
+    // s is the text that wasn't matched
+    /* fprintf(stderr, "Flex Error: %s\n", s); */
+    exit(1);
 }
