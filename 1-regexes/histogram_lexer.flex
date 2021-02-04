@@ -14,16 +14,16 @@ double parse_fraction(const std::string &yytext);
 
 %}
 
-letters             ([a-z]|[A-Z])+
-string              \[[^\]]*\]
+letters     ([a-z]|[A-Z])+
+string      \[[^\]]*\]
 
-unsigned_decimal    (0|([1-9][0-9]*))(\.[0-9]*)?
-decimal             -?{unsigned_decimal}
-fraction            {decimal}\/{unsigned_decimal}
+integer     (0|([1-9][0-9]*))
+decimal     -?{integer}(\.[0-9]*)?
+fraction    -?{integer}\/{integer}
 
-word                {letters}|{string}
+word        {letters}|{string}
 
-number              {decimal}|{fraction}
+number      {decimal}|{fraction}
 
 %%
 
